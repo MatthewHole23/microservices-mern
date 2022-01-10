@@ -32,22 +32,21 @@ app.post('/posts/:id/comments', async (req, res) => {
     const postId = req.params.id;
 
     const comments = commentsByPostId[postId] || [];
-
-    comments.push({
+    const newComment = {
         id: commentId,
         content: content,
-    });
+        postId: postId,
+        status: 'pending', 
+    };
+
+    comments.push(newComment);
 
     // adds a new entry for that postId OR overwrites the entry if one already exists
     commentsByPostId[postId] = comments;
 
     await axios.post('http://localhost:4005/events', {
         type: 'CommentCreated',
-        data: {
-            id: commentId,
-            content,
-            postId: req.params.id,
-        }
+        data: newComment,
     }).catch((err) => {
         console.log(err.message);
     });
@@ -57,9 +56,35 @@ app.post('/posts/:id/comments', async (req, res) => {
 
 
 // handles the event
-app.post('/events', (req, res) => {
+app.post('/events', async (req, res) => {
     console.log('Received Event', req.body.type);
+    const { type, data } = req.body;
+    
+    if (type == 'CommentModerated') {
+        const { id, postId, status, content } = data;
+        console.log('Comment has been moderated');
 
+        const comments = commentsByPostId[postId];
+
+        const comment = comments.find(comment => {
+            return comment.id === id;
+        });
+        comment.status = status;
+
+
+        await axios.post('http://localhost:4005/events', {
+        type: 'CommentUpdated',
+        data: {
+            id, 
+            status,
+            postId,
+            content
+        },
+    }).catch((err) => {
+        console.log(err.message);
+    });
+    }
+    
     res.send({});
 });
 

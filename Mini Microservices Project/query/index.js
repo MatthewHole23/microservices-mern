@@ -13,7 +13,10 @@ app.use(bodyParser.json());
 app.use(cors());
 
 const posts = {};
-
+const STATUSES = {
+    'pending': 'This comment is pending moderation',
+    'rejected': 'This comment contains suspected illegal word(s)',
+}
 
 app.post('/events', (req, res) => {
     // Gets the body of the request
@@ -29,12 +32,52 @@ app.post('/events', (req, res) => {
             };
         }
     } else if (body.type == 'CommentCreated') {
-        const { id, postId, content} = body.data;
+        const { id, postId, content, status} = body.data;
         if (posts[postId]) {
-            posts[postId]['comments'].push({
-                id,
-                content,
-            });
+            if (status == 'pending') {
+                posts[postId]['comments'].push({
+                    id,
+                    content: STATUSES[status],
+                    status,
+                });
+            } else {
+                posts[postId]['comments'].push({
+                    id,
+                    content,
+                });
+            }
+        }
+    } else if (body.type == 'CommentUpdated') {
+        const { id, postId, content, status} = body.data;
+
+        console.log('Updated Data: ', body.data);
+
+        if (posts[postId]) {
+            if (status == 'approved') {
+                posts[postId]['comments'].find(comment => {
+                    
+                    if (comment.id == id) {
+                        comment = body.data;
+                    }
+                    
+                    return true;
+                });
+            
+            } else {
+                posts[postId]['comments'].find(comment => {
+                    
+                    if (comment.id == id) {
+                        comment = {
+                            id, 
+                            postId, 
+                            content: STATUSES[status],
+                            status,
+                        };
+                    }
+
+                    return true;
+                });
+            }
         }
     }
 
