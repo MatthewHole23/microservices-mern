@@ -5,6 +5,7 @@
 import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
+import axios from 'axios';
 
 const app = express();
 
@@ -24,55 +25,8 @@ app.post('/events', (req, res) => {
 
     console.log('Posts: ', posts);
 
-    if (body.type == 'PostCreated') {
-        const { id, title} = body.data;
-        if (!posts[id]) {
-            posts[id] = {
-                id,
-                title,
-                comments: [],
-            };
-        }
-    } else if (body.type == 'CommentCreated') {
-        const { id, postId, content, status} = body.data;
-        if (posts[postId]) {
-            if (status == 'pending') {
-                posts[postId]['comments'].push({
-                    id,
-                    content: STATUSES[status],
-                    status,
-                });
-            } else {
-                posts[postId]['comments'].push({
-                    id,
-                    content,
-                });
-            }
-        }
-    } else if (body.type == 'CommentUpdated') {
-        const { id, postId, content, status} = body.data;
-
-        console.log('Updated Data: ', body.data);
-
-
-        if (posts[postId]) {
-            if (status == 'approved') {
-                // Finds index of element within array
-                const index = posts[postId]['comments'].findIndex((comment => comment.id == id));
-                posts[postId]['comments'][index] = body.data;
-            
-            } else {
-                // Finds index of element within array
-                const index = posts[postId]['comments'].findIndex((comment => comment.id == id));
-                posts[postId]['comments'][index] = {
-                    id,
-                    postId,
-                    status,
-                    content: STATUSES[status],
-                };
-            }
-        }
-    }
+    // Handles the various events
+    eventHandler(body);
 
     console.log(posts);
 
@@ -85,6 +39,15 @@ app.get('/posts', (req, res) => {
 
 app.listen(4002, () => {
     console.log('Listening on Port 4002');
+
+    // Makes request to get all of the events that have been emitted
+    const events = await axios.get('http://localhost:4005/events');
+
+    // Handling the events
+    for (let event of events) {
+        console.log('Processing event: ', event.type);
+        handleEvent(event);
+    }
 });
 
 // function addPost(post, currentPosts) {
@@ -112,3 +75,56 @@ app.listen(4002, () => {
 
 //     return currentPosts;
 // }
+
+
+function eventHandler(body) {
+    if (body.type == 'PostCreated') {
+        const { id, title } = body.data;
+        if (!posts[id]) {
+            posts[id] = {
+                id,
+                title,
+                comments: [],
+            };
+        }
+    } else if (body.type == 'CommentCreated') {
+        const { id, postId, content, status } = body.data;
+        if (posts[postId]) {
+            if (status == 'pending') {
+                posts[postId]['comments'].push({
+                    id,
+                    content: STATUSES[status],
+                    status,
+                });
+            } else {
+                posts[postId]['comments'].push({
+                    id,
+                    content,
+                });
+            }
+        }
+    } else if (body.type == 'CommentUpdated') {
+        const { id, postId, status } = body.data;
+
+        console.log('Updated Data: ', body.data);
+
+
+        if (posts[postId]) {
+            if (status == 'approved') {
+                // Finds index of element within array
+                const index = posts[postId]['comments'].findIndex((comment => comment.id == id));
+                posts[postId]['comments'][index] = body.data;
+            
+            } else {
+                // Finds index of element within array
+                const index = posts[postId]['comments'].findIndex((comment => comment.id == id));
+                posts[postId]['comments'][index] = {
+                    id,
+                    postId,
+                    status,
+                    content: STATUSES[status],
+                };
+            }
+        }
+    }
+}
