@@ -22,6 +22,8 @@ app.post('/events', (req, res) => {
     // Gets the body of the request
     const body = req.body;
 
+    console.log('Posts: ', posts);
+
     if (body.type == 'PostCreated') {
         const { id, title} = body.data;
         if (!posts[id]) {
@@ -52,31 +54,22 @@ app.post('/events', (req, res) => {
 
         console.log('Updated Data: ', body.data);
 
+
         if (posts[postId]) {
             if (status == 'approved') {
-                posts[postId]['comments'].find(comment => {
-                    
-                    if (comment.id == id) {
-                        comment = body.data;
-                    }
-                    
-                    return true;
-                });
+                // Finds index of element within array
+                const index = posts[postId]['comments'].findIndex((comment => comment.id == id));
+                posts[postId]['comments'][index] = body.data;
             
             } else {
-                posts[postId]['comments'].find(comment => {
-                    
-                    if (comment.id == id) {
-                        comment = {
-                            id, 
-                            postId, 
-                            content: STATUSES[status],
-                            status,
-                        };
-                    }
-
-                    return true;
-                });
+                // Finds index of element within array
+                const index = posts[postId]['comments'].findIndex((comment => comment.id == id));
+                posts[postId]['comments'][index] = {
+                    id,
+                    postId,
+                    status,
+                    content: STATUSES[status],
+                };
             }
         }
     }

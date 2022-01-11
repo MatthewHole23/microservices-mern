@@ -13,6 +13,7 @@ app.post('/events', async (req, res) => {
     console.log('Data within moderation');
 
     if (type == 'CommentCreated') {
+        await sleep(2000);
         // modifies the data object
         const comment = moderateComment(data);
         console.log(comment);
@@ -35,17 +36,24 @@ app.listen(4003, () => {
 });
 
 function moderateComment(comment) {
+    console.log('Comment for moderation: ', comment);
     // iterates through illegalWords
     illegalWords.forEach(word => {
         // if content includes illegal word, status updated before short-circuit
         if (comment?.content.includes(word)) {
             comment['status'] = 'rejected';
             console.log(`Rejected comment for use of '${word}' illegal word`);
-            return comment;
+            return;
         }
     });
 
     // updates status with approved
-    comment['status'] = 'approved';
+    comment['status'] = (comment['status'] === 'pending') ? 'approved' : comment['status'];
     return comment;
 }
+
+function sleep(ms) {
+    return new Promise((resolve) => {
+      setTimeout(resolve, ms);
+    });
+  }
